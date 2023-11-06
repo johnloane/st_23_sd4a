@@ -6,14 +6,18 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense 
 from tensorflow.keras.optimizers import Adam
 from keras.utils import to_categorical
+from PIL import Image
 import random
+import requests
+import cv2
 
 np.random.seed(0)
 
 def create_model():
     model = Sequential()
-    model.add(Dense(784, input_dim=num_pixels, activation='relu'))
-    model.add(Dense(784, activation='relu'))
+    model.add(Dense(10, input_dim=num_pixels, activation='relu'))
+    model.add(Dense(30, activation='relu'))
+    model.add(Dense(10, activation='relu'))
     model.add(Dense(num_classes, activation='softmax'))
     model.compile(Adam(learning_rate=0.01), loss='categorical_crossentropy', metrics=['accuracy'])
     return model
@@ -60,11 +64,36 @@ print(X_test.shape)
 
 model = create_model()
 print(model.summary())
-history = model.fit(X_train, y_train, validation_split=0.1, epochs=50, batch_size = 200, verbose=1, shuffle=1)
+history = model.fit(X_train, y_train, validation_split=0.1, epochs=15, batch_size = 200, verbose=1, shuffle=1)
 plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
 plt.legend(['loss', 'validation_loss'])
 plt.title('Loss')
 plt.xlabel('epoch')
 plt.show()
+
+score = model.evaluate(X_test, y_test, verbose=1)
+print('Test score: ', score[0])
+print('Test accuracy: ', score[1])
+
+url = 'https://colah.github.io/posts/2014-10-Visualizing-MNIST/img/mnist_pca/MNIST-p1815-4.png'
+response = requests.get(url, stream=True)
+img = Image.open(response.raw)
+plt.imshow(img)
+plt.show()
+
+img_array = np.asarray(img)
+resized = cv2.resize(img_array, (28,28))
+gray_scale = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+image = cv2.bitwise_not(gray_scale)
+plt.imshow(image, cmap=plt.get_cmap("gray"))
+plt.show()
+
+image = image/255
+image = image.reshape(1, 784)
+prediction = np.argmax(model.predict(image), axis=-1)
+print("Predicted digit: ", str(prediction))
+
+
+
          
