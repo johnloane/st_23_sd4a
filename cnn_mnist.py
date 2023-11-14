@@ -7,7 +7,9 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 from keras.utils import to_categorical
 from keras.layers import Flatten
-from keras.layers import Conv2D, MaxPooling2D
+from keras.layers import Conv2D, MaxPooling2D, Dropout
+from keras.models import Model
+
 from PIL import Image
 import random
 import requests
@@ -31,7 +33,28 @@ def analyze_model(model, X_test, y_test, X_train, y_train):
     print(model.summary())
     plot_loss(model, X_train, y_train)
     evaluate_model(model, X_test, y_test)
-    test_model_with_sample_image(model)
+    img = test_model_with_sample_image(model)
+    visualize_cnn_output(model, img)
+
+
+def visualize_cnn_output(model, img):
+    layer1 = Model(inputs = model.layers[0].input, outputs = model.layers[0].output)
+    layer2 = Model(inputs = model.layers[0].input, outputs = model.layers[2].output)
+    visual_layer1 = layer1.predict(img)
+    visual_layer2 = layer2.predict(img)
+    plt.figure(figsize=(10, 6))
+    for i in range(30):
+        plt.subplot(6, 5, i+1)
+        plt.imshow(visual_layer1[0, :, :, i], cmap=plt.get_cmap('jet'))
+        plt.axis('off')
+    plt.show()
+    plt.figure(figsize=(10, 6))
+    for i in range(15):
+        plt.subplot(3, 5, i+1)
+        plt.imshow(visual_layer2[0, :, :, i], cmap=plt.get_cmap('jet'))
+        plt.axis('off')
+    plt.show()
+
 
 
 def test_model_with_sample_image(model):
@@ -52,6 +75,7 @@ def test_model_with_sample_image(model):
     image = image.reshape(1, 28, 28, 1)
     prediction = np.argmax(model.predict(image), axis=-1)
     print("Predicted digit: ", str(prediction))
+    return image
 
 
 def evaluate_model(model, X_test, y_test):
@@ -61,7 +85,7 @@ def evaluate_model(model, X_test, y_test):
 
 
 def plot_loss(model, X_train, y_train):
-    history = model.fit(X_train, y_train, validation_split=0.1, epochs=15, batch_size = 200, verbose=1, shuffle=1)
+    history = model.fit(X_train, y_train, validation_split=0.1, epochs=10, batch_size = 200, verbose=1, shuffle=1)
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.legend(['loss', 'validation_loss'])
@@ -139,6 +163,7 @@ def leNet_model():
     model.add(MaxPooling2D(pool_size=(2,2)))
     model.add(Flatten())
     model.add(Dense(500, activation='relu'))
+    model.add(Dropout(0.5))
     model.add(Dense(num_classes, activation='softmax'))
     model.compile(Adam(learning_rate=0.01), loss='categorical_crossentropy', metrics=['accuracy'])
     return model
